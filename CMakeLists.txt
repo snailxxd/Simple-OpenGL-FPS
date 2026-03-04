@@ -40,7 +40,7 @@ set(LIBS ${LIBS} IMGUI)
 
 # DEMO 列表
 set(DEMOS
-    my_render_engine
+    render_engine
 )
 
 function(create_demo DEMO)
