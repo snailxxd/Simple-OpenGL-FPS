@@ -1,0 +1,26 @@
+# Build directories
+build/
+cmake_build/
+dist/
+bin/
+obj/
+
+# Resources
+resources/environments/
+resources/hdr/
+resources/models/
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Compiled files
+*.o
+*.obj
+*.exe
+*.so
+*.dylib
