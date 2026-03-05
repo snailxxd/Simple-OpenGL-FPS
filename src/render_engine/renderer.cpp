@@ -8,26 +8,19 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "render_engine/gui_manager.h"
-#include "render_engine/engine_globals.h"
-
 #define RESOURCES_PATH(path) (std::string(RESOURCES_DIR) + path)
 
-Renderer::Renderer()
-    : m_PbrShader(RESOURCES_PATH("/shaders/core/pbr.vs"), RESOURCES_PATH("/shaders/core/pbr.fs")),
+Renderer::Renderer(int width, int height, int shadowWidth, int shadowHeight)
+    : m_Width(width), m_Height(height), m_ShadowWidth(shadowWidth), m_ShadowHeight(shadowHeight),
+      m_PbrShader(RESOURCES_PATH("/shaders/core/pbr.vs"), RESOURCES_PATH("/shaders/core/pbr.fs")),
       m_ScreenShader(RESOURCES_PATH("/shaders/frame/frame.vs"), RESOURCES_PATH("/shaders/frame/frame.fs")),
       m_SkyboxShader(RESOURCES_PATH("/shaders/skybox/skybox.vs"), RESOURCES_PATH("/shaders/skybox/skybox.fs")),
       m_ShadowShader(RESOURCES_PATH("/shaders/core/shadow.vs"), RESOURCES_PATH("/shaders/core/shadow.fs")) {
 
-    // 初始化天空盒
-    m_Skybox = loadHDRtoSkybox(RESOURCES_PATH("/hdr/citrus_orchard_puresky_1k.hdr"));
-
-    // 初始化帧缓冲和屏幕 Quad
+    m_Skybox = loadHDRtoSkybox(RESOURCES_PATH("/hdr/citrus_orchard_puresky_1k.hdr"), width, height);
     m_ScreenVAO = init_screenVAO();
-    m_FBO = init_framebuffer(m_TexColorBuffer, m_TexDepthBuffer);
-
-    // 初始化阴影 FBO
-    m_ShadowFBO = init_shadow_fbo(m_DepthMap);
+    m_FBO = init_framebuffer(m_TexColorBuffer, m_TexDepthBuffer, width, height);
+    m_ShadowFBO = init_shadow_fbo(m_DepthMap, shadowWidth, shadowHeight);
 }
 
 Renderer::~Renderer() {
@@ -57,8 +50,8 @@ Renderer::~Renderer() {
     }
 }
 
-void Renderer::BeginFrame() {
-    if (renderMode)
+void Renderer::BeginFrame(const RenderParams& params) {
+    if (params.renderMode)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     else
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -67,10 +60,10 @@ void Renderer::BeginFrame() {
     glEnable(GL_CULL_FACE);
 }
 
-void Renderer::RenderShadows(Scene& scene) {
-    m_LightSpaceMatrix = computeLightSpaceMatrix(scene.dirLight.direction);
+void Renderer::RenderShadows(Scene& scene, const RenderParams& params) {
+    m_LightSpaceMatrix = computeLightSpaceMatrix(scene.dirLight.direction, params.orthoSize, params.nearPlane, params.farPlane);
 
-    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    glViewport(0, 0, params.shadowWidth, params.shadowHeight);
     glBindFramebuffer(GL_FRAMEBUFFER, m_ShadowFBO);
     glClear(GL_DEPTH_BUFFER_BIT);
 
@@ -78,9 +71,8 @@ void Renderer::RenderShadows(Scene& scene) {
     glCullFace(GL_FRONT);
 
     m_ShadowShader.use();
-    if (animator) {
-        auto transforms = animator->GetFinalBoneMatrices();
-
+    if (params.animator) {
+        auto transforms = params.animator->GetFinalBoneMatrices();
         for (int i = 0; i < static_cast<int>(transforms.size()); ++i) {
             m_ShadowShader.setMat4("finalBonesMatrices[" + std::to_string(i) + "]", transforms[i]);
         }
@@ -93,43 +85,38 @@ void Renderer::RenderShadows(Scene& scene) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Renderer::RenderScene(Scene& scene, Camera& camera) {
-    glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+void Renderer::RenderScene(Scene& scene, Camera& camera, const RenderParams& params) {
+    glViewport(0, 0, params.width, params.height);
 
     glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
-    glClearColor(BG_COLOR.r, BG_COLOR.g, BG_COLOR.b, BG_COLOR.a);
+    glClearColor(params.bgColor.r, params.bgColor.g, params.bgColor.b, params.bgColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     m_PbrShader.use();
-
     m_PbrShader.setMat4("lightSpaceMatrix", m_LightSpaceMatrix);
 
-    // 更新光源
     scene.spotLight.position = camera.Position;
     scene.spotLight.direction = camera.Front;
     scene.dirLight.setUniform(m_PbrShader);
     scene.spotLight.setUniform(m_PbrShader);
-    if (!spotLightOn) {
+    if (!params.spotLightOn) {
         scene.spotLight.shut(m_PbrShader);
     }
 
     m_PbrShader.setVec3("viewPos", camera.Position);
 
-    // 视图 / 投影矩阵
     glm::mat4 view = camera.GetViewMatrix();
-    glm::mat4 projection = camera.GetProjectionMatrix(static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT));
+    glm::mat4 projection = camera.GetProjectionMatrix(static_cast<float>(params.width) / static_cast<float>(params.height));
     m_PbrShader.setMat4("view", view);
     m_PbrShader.setMat4("projection", projection);
 
-    // 骨骼动画
-    if (animator) {
-        auto transforms = animator->GetFinalBoneMatrices();
+    if (params.animator) {
+        auto transforms = params.animator->GetFinalBoneMatrices();
         for (int i = 0; i < static_cast<int>(transforms.size()); ++i) {
             m_PbrShader.setMat4("finalBonesMatrices[" + std::to_string(i) + "]", transforms[i]);
         }
     }
 
-    // 阴影贴图
     glActiveTexture(GL_TEXTURE6);
     glBindTexture(GL_TEXTURE_2D, m_DepthMap);
     m_PbrShader.setInt("dirLight.shadowMap", 6);
@@ -137,14 +124,14 @@ void Renderer::RenderScene(Scene& scene, Camera& camera) {
     renderSceneGeometry(m_PbrShader, scene);
 }
 
-void Renderer::RenderSkybox(Scene& scene, Camera& camera) {
+void Renderer::RenderSkybox(Scene& scene, Camera& camera, const RenderParams& params) {
     (void)scene;
 
-    if (!renderSkybox) {
+    if (!params.renderSkybox) {
         return;
     }
 
-    glm::mat4 projection = camera.GetProjectionMatrix(static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT));
+    glm::mat4 projection = camera.GetProjectionMatrix(static_cast<float>(params.width) / static_cast<float>(params.height));
     glm::mat4 view = camera.GetViewMatrix();
 
     glDepthFunc(GL_LEQUAL);
@@ -163,12 +150,12 @@ void Renderer::RenderSkybox(Scene& scene, Camera& camera) {
     glDepthFunc(GL_LESS);
 }
 
-void Renderer::EndFrame() {
+void Renderer::EndFrame(const RenderParams& params) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glClear(GL_COLOR_BUFFER_BIT);
     glDisable(GL_DEPTH_TEST);
 
-    if (!gammaCorrection) {
+    if (!params.gammaCorrection) {
         glEnable(GL_FRAMEBUFFER_SRGB);
     }
 
@@ -178,8 +165,8 @@ void Renderer::EndFrame() {
 }
 
 void Renderer::Resize(int width, int height) {
-    WINDOW_WIDTH = width;
-    WINDOW_HEIGHT = height;
+    m_Width = width;
+    m_Height = height;
 
     if (m_FBO) {
         glDeleteFramebuffers(1, &m_FBO);
@@ -194,7 +181,7 @@ void Renderer::Resize(int width, int height) {
         m_TexDepthBuffer = 0;
     }
 
-    m_FBO = init_framebuffer(m_TexColorBuffer, m_TexDepthBuffer);
+    m_FBO = init_framebuffer(m_TexColorBuffer, m_TexDepthBuffer, width, height);
 }
 
 void Renderer::renderSceneGeometry(Shader& shader, Scene& scene) {
@@ -211,13 +198,13 @@ void Renderer::renderSceneGeometry(Shader& shader, Scene& scene) {
     scene.models[0]->Draw(shader, model);
 }
 
-glm::mat4 Renderer::computeLightSpaceMatrix(const glm::vec3& lightDir) const {
+glm::mat4 Renderer::computeLightSpaceMatrix(const glm::vec3& lightDir, float orthoSize, float nearPlane, float farPlane) const {
     glm::mat4 lightProjection = glm::ortho(-orthoSize, orthoSize, -orthoSize, orthoSize, nearPlane, farPlane);
     glm::mat4 lightView = glm::lookAt(lightDir * -10.0f, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     return lightProjection * lightView;
 }
 
-SkyboxData Renderer::loadHDRtoSkybox(const std::string& hdrPath) {
+SkyboxData Renderer::loadHDRtoSkybox(const std::string& hdrPath, int viewportWidth, int viewportHeight) {
     SkyboxData result{};
 
     float vertices[] = {
@@ -319,29 +306,26 @@ SkyboxData Renderer::loadHDRtoSkybox(const std::string& hdrPath) {
     glDeleteTextures(1, &hdrTexture);
     glDeleteFramebuffers(1, &captureFBO);
     glDeleteRenderbuffers(1, &captureRBO);
-    // 恢复主视口
-    glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+    glViewport(0, 0, viewportWidth, viewportHeight);
 
     return result;
 }
 
-unsigned int Renderer::init_framebuffer(unsigned int& texColorBuffer, unsigned int& texDepthBuffer) {
+unsigned int Renderer::init_framebuffer(unsigned int& texColorBuffer, unsigned int& texDepthBuffer, int width, int height) {
     unsigned int FBO;
     glGenFramebuffers(1, &FBO);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-    // 颜色缓冲纹理
     glGenTextures(1, &texColorBuffer);
     glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
 
-    // 深度缓冲纹理
     glGenTextures(1, &texDepthBuffer);
     glBindTexture(GL_TEXTURE_2D, texDepthBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texDepthBuffer, 0);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -387,14 +371,14 @@ unsigned int Renderer::init_screenVAO() {
     return quadVAO;
 }
 
-unsigned int Renderer::init_shadow_fbo(unsigned int& depthMap) {
+unsigned int Renderer::init_shadow_fbo(unsigned int& depthMap, int shadowWidth, int shadowHeight) {
     unsigned int FBO;
     glGenFramebuffers(1, &FBO);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
     glGenTextures(1, &depthMap);
     glBindTexture(GL_TEXTURE_2D, depthMap);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadowWidth, shadowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);

@@ -13,12 +13,10 @@ set(LIBS glfw3 assimp z opengl32)
 add_library(MODEL_LIB src/model/model_gltf.cpp)
 target_include_directories(MODEL_LIB PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(MODEL_LIB PRIVATE assimp z GLAD STB_IMAGE)
-set(LIBS ${LIBS} MODEL_LIB)
 
 add_library(ANIMATION_LIB src/animation/animation.cpp src/animation/bone.cpp)
 target_include_directories(ANIMATION_LIB PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(ANIMATION_LIB PRIVATE assimp z GLAD STB_IMAGE)
-set(LIBS ${LIBS} ANIMATION_LIB)
 
 add_library(GLAD src/glad.c)
 target_include_directories(GLAD PUBLIC ${CMAKE_SOURCE_DIR}/include)
@@ -38,9 +36,39 @@ target_include_directories(IMGUI PUBLIC
 )
 set(LIBS ${LIBS} IMGUI)
 
+add_library(RENDER_ENGINE_LIB
+    src/render_engine/OpenGLRenderEngine.cpp
+    src/render_engine/renderer.cpp
+    src/render_engine/gui_manager.cpp
+    src/render_engine/scene.cpp
+)
+target_include_directories(RENDER_ENGINE_LIB PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(RENDER_ENGINE_LIB
+    PRIVATE GLAD STB_IMAGE IMGUI
+    PRIVATE MODEL_LIB ANIMATION_LIB
+)
+
+add_library(APPLICATION_LIB src/application/Application.cpp src/application/FPSGame.cpp)
+target_include_directories(APPLICATION_LIB PUBLIC ${CMAKE_SOURCE_DIR}/include)
+
+# 统一 LIBS 顺序，保证依赖库出现在使用它们的库之后（MinGW/GNU ld 需要顺序）
+set(LIBS
+    GLAD
+    STB_IMAGE
+    IMGUI
+    RENDER_ENGINE_LIB
+    MODEL_LIB
+    ANIMATION_LIB
+    APPLICATION_LIB
+    glfw3
+    assimp
+    z
+    opengl32
+)
+
 # DEMO 列表
 set(DEMOS
-    render_engine
+    demo
 )
 
 function(create_demo DEMO)

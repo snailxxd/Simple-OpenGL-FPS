@@ -10,6 +10,24 @@ struct GLFWwindow;
 #include "shader/shader.h"
 #include "camera/camera.h"
 #include "render_engine/scene.h"
+#include "animation/animator.h"
+
+/// 每帧渲染参数，由引擎传入
+struct RenderParams {
+    int width = 1920;
+    int height = 1080;
+    int shadowWidth = 2048;
+    int shadowHeight = 2048;
+    int renderMode = 0;       // 0: Fill, 1: Wireframe
+    int gammaCorrection = 0;  // 0: On, 1: Off
+    bool spotLightOn = false;
+    int renderSkybox = 0;     // 0: No, 1: Yes
+    float orthoSize = 2.5f;
+    float nearPlane = 1.0f;
+    float farPlane = 20.0f;
+    glm::vec4 bgColor{0.02f, 0.02f, 0.02f, 1.0f};
+    Animator* animator = nullptr;
+};
 
 // 天空盒数据
 struct SkyboxData {
@@ -19,25 +37,14 @@ struct SkyboxData {
 
 class Renderer {
 public:
-    Renderer();
+    Renderer(int width, int height, int shadowWidth, int shadowHeight);
     ~Renderer();
 
-    // 设置全局渲染状态
-    void BeginFrame();
-
-    // 渲染阴影贴图
-    void RenderShadows(Scene& scene);
-
-    // 渲染主场景到帧缓冲
-    void RenderScene(Scene& scene, Camera& camera);
-
-    // 渲染天空盒
-    void RenderSkybox(Scene& scene, Camera& camera);
-
-    // 将帧缓冲绘制到屏幕
-    void EndFrame();
-
-    // 窗口大小变化时重建主场景 FBO 纹理
+    void BeginFrame(const RenderParams& params);
+    void RenderShadows(Scene& scene, const RenderParams& params);
+    void RenderScene(Scene& scene, Camera& camera, const RenderParams& params);
+    void RenderSkybox(Scene& scene, Camera& camera, const RenderParams& params);
+    void EndFrame(const RenderParams& params);
     void Resize(int width, int height);
 
 private:
@@ -65,18 +72,18 @@ private:
     // 光空间矩阵
     glm::mat4 m_LightSpaceMatrix{1.0f};
 
+    int m_Width = 1920;
+    int m_Height = 1080;
+    int m_ShadowWidth = 2048;
+    int m_ShadowHeight = 2048;
+
 private:
-    // 场景几何渲染
     void renderSceneGeometry(Shader& shader, Scene& scene);
-
-    // 计算光空间矩阵
-    glm::mat4 computeLightSpaceMatrix(const glm::vec3& lightDir) const;
-
-    // 资源初始化
-    SkyboxData loadHDRtoSkybox(const std::string& hdrPath);
+    glm::mat4 computeLightSpaceMatrix(const glm::vec3& lightDir, float orthoSize, float nearPlane, float farPlane) const;
+    SkyboxData loadHDRtoSkybox(const std::string& hdrPath, int viewportWidth, int viewportHeight);
     unsigned int init_screenVAO();
-    unsigned int init_framebuffer(unsigned int& texColorBuffer, unsigned int& texDepthBuffer);
-    unsigned int init_shadow_fbo(unsigned int& depthMap);
+    unsigned int init_framebuffer(unsigned int& texColorBuffer, unsigned int& texDepthBuffer, int width, int height);
+    unsigned int init_shadow_fbo(unsigned int& depthMap, int shadowWidth, int shadowHeight);
 
     // 将场景颜色纹理绘制到屏幕
     void render_screen();
