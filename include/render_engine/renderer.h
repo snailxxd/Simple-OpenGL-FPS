@@ -9,10 +9,9 @@ struct GLFWwindow;
 
 #include "shader/shader.h"
 #include "camera/camera.h"
-#include "render_engine/scene.h"
+#include "world/scene.h"
 #include "animation/animator.h"
 
-/// 每帧渲染参数，由引擎传入
 struct RenderParams {
     int width = 1920;
     int height = 1080;
@@ -21,6 +20,7 @@ struct RenderParams {
     int renderMode = 0;       // 0: Fill, 1: Wireframe
     int gammaCorrection = 0;  // 0: On, 1: Off
     bool spotLightOn = false;
+    bool hideMouse = true;
     int renderSkybox = 0;     // 0: No, 1: Yes
     float orthoSize = 2.5f;
     float nearPlane = 1.0f;

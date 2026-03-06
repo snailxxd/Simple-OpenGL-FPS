@@ -5,8 +5,9 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb_image.h>
-
 #include <glm/gtc/matrix_transform.hpp>
+
+#include "model/model_gltf.h"
 
 #define RESOURCES_PATH(path) (std::string(RESOURCES_DIR) + path)
 
@@ -185,17 +186,17 @@ void Renderer::Resize(int width, int height) {
 }
 
 void Renderer::renderSceneGeometry(Shader& shader, Scene& scene) {
-    if (scene.models.empty() || !scene.models[0]) {
+    if (scene.GetEntityCount() == 0) {
         return;
     }
-
     shader.use();
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
-    model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    model = glm::scale(model, glm::vec3(1.0f));
-
-    scene.models[0]->Draw(shader, model);
+    for (auto entity : scene.GetEntities()) {
+        if (!entity->model) {
+            continue;
+        }
+        glm::mat4 transform = entity->GetModelMatrix();
+        entity->model->Draw(shader, transform);
+    }
 }
 
 glm::mat4 Renderer::computeLightSpaceMatrix(const glm::vec3& lightDir, float orthoSize, float nearPlane, float farPlane) const {
@@ -338,6 +339,7 @@ unsigned int Renderer::init_framebuffer(unsigned int& texColorBuffer, unsigned i
 
 void Renderer::render_screen() {
     m_ScreenShader.use();
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glBindVertexArray(m_ScreenVAO);
     glBindTexture(GL_TEXTURE_2D, m_TexColorBuffer);
     glDrawArrays(GL_TRIANGLES, 0, 6);

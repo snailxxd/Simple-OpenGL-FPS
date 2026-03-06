@@ -105,6 +105,15 @@ void GUIManager::render_gui(const GUIContext& ctx) {
         ImGui::EndChild();
     }
 
+    if (ctx.weaponOffset) {
+        ImGui::BeginChild("Weapon Settings", ImVec2(0, 110), true);
+        ImGui::Text("Weapon Offset");
+        ImGui::SliderFloat("X", &ctx.weaponOffset->x, -3.0f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SliderFloat("Y", &ctx.weaponOffset->y, -3.0f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SliderFloat("Z", &ctx.weaponOffset->z, -3.0f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::EndChild();
+    }
+
     ImGui::End();
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

@@ -40,7 +40,6 @@ add_library(RENDER_ENGINE_LIB
     src/render_engine/OpenGLRenderEngine.cpp
     src/render_engine/renderer.cpp
     src/render_engine/gui_manager.cpp
-    src/render_engine/scene.cpp
 )
 target_include_directories(RENDER_ENGINE_LIB PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(RENDER_ENGINE_LIB
@@ -48,10 +47,13 @@ target_link_libraries(RENDER_ENGINE_LIB
     PRIVATE MODEL_LIB ANIMATION_LIB
 )
 
+add_library(WORLD_LIB src/world/scene.cpp)
+target_include_directories(WORLD_LIB PUBLIC ${CMAKE_SOURCE_DIR}/include)
+
 add_library(APPLICATION_LIB src/application/Application.cpp src/application/FPSGame.cpp)
 target_include_directories(APPLICATION_LIB PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
-# 统一 LIBS 顺序，保证依赖库出现在使用它们的库之后（MinGW/GNU ld 需要顺序）
+# 统一 LIBS 顺序
 set(LIBS
     GLAD
     STB_IMAGE
@@ -59,6 +61,7 @@ set(LIBS
     RENDER_ENGINE_LIB
     MODEL_LIB
     ANIMATION_LIB
+    WORLD_LIB
     APPLICATION_LIB
     glfw3
     assimp

@@ -1,10 +1,10 @@
 #pragma once
 
+#include "player/player.h"
 #include "application/Application.h"
-#include "render_engine/scene.h"
+#include "world/scene.h"
 #include "render_engine/renderer.h"
 #include "render_engine/gui_manager.h"
-#include "camera/camera.h"
 
 #include <memory>
 #include <string>
@@ -23,19 +23,8 @@ protected:
     void OnGui() override;
 
 private:
-    // 场景与相机由应用层拥有
-    Scene m_Scene;
-    Camera m_Camera{
-        glm::vec3(0.0f, 0.0f, 3.0f),
-        glm::vec3(0.0f, 1.0f, 0.0f),
-        -90.0f,
-        0.0f
-    };
-
-    // 模型与动画
-    std::unique_ptr<class Model> m_Model;
-    std::unique_ptr<class Animator> m_Animator;
-    std::string m_CurrentAnimationName;
+    Scene m_Scene;                      // 场景
+    std::shared_ptr<Player> m_Player;   // 玩家
 
     // 渲染参数与 GUI 控制变量
     RenderParams m_RenderParams{};
@@ -45,7 +34,13 @@ private:
     float m_OrthoSize = 2.5f;
     float m_NearPlane = 1.0f;
     float m_FarPlane = 20.0f;
+    bool m_SpotLightOn = false;
+    bool m_HideMouse = true;
+    float m_MouseSensitivity = 0.05f;
 
     // 简单时间累计，用于灯光动画
     float m_Time = 0.0f;
+
+    void ProcessKeyboardInput(float deltaTime);
+    void ProcessMouseInput(float deltaTime);
 };

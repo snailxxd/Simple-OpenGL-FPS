@@ -1,7 +1,7 @@
 #include "render_engine/OpenGLRenderEngine.h"
 #include "render_engine/renderer.h"
 #include "render_engine/gui_manager.h"
-#include "render_engine/scene.h"
+#include "world/scene.h"
 #include "camera/camera.h"
 
 #include <iostream>
@@ -14,7 +14,9 @@ namespace {
     OpenGLRenderEngine* s_Engine = nullptr;
 }
 
-OpenGLRenderEngine::OpenGLRenderEngine() = default;
+OpenGLRenderEngine::OpenGLRenderEngine() {
+    s_Engine = this;
+}
 
 OpenGLRenderEngine::~OpenGLRenderEngine() {
     s_Engine = nullptr;
@@ -26,8 +28,6 @@ OpenGLRenderEngine::~OpenGLRenderEngine() {
 }
 
 bool OpenGLRenderEngine::Initialize() {
-    s_Engine = this;
-
     // 初始化 GLFW
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -58,17 +58,10 @@ bool OpenGLRenderEngine::Initialize() {
     m_Renderer = std::make_unique<Renderer>(m_Width, m_Height, m_ShadowWidth, m_ShadowHeight);
     m_GUIManager = std::make_unique<GUIManager>(m_Window);
 
-    m_LastX = m_Width / 2.0f;
-    m_LastY = m_Height / 2.0f;
-
-    glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    SetMouseHidden(true);
     glEnable(GL_CULL_FACE);
 
     return true;
-}
-
-bool OpenGLRenderEngine::ShouldClose() const {
-    return m_Window ? glfwWindowShouldClose(m_Window) : true;
 }
 
 void OpenGLRenderEngine::BeginFrame() {
@@ -76,14 +69,14 @@ void OpenGLRenderEngine::BeginFrame() {
     m_DeltaTime = currentFrame - m_LastFrame;
     m_LastFrame = currentFrame;
 
-    processInput();
+    m_MouseDeltaX = 0.0f;
+    m_MouseDeltaY = 0.0f;
+
+    glfwPollEvents();
 }
 
 void OpenGLRenderEngine::EndFrame() {
-    if (m_Window) {
-        glfwSwapBuffers(m_Window);
-        glfwPollEvents();
-    }
+    glfwSwapBuffers(m_Window);
 }
 
 void OpenGLRenderEngine::RenderFrame(Scene& scene, Camera& camera, const RenderParams& params) {
@@ -117,31 +110,23 @@ bool OpenGLRenderEngine::IsKeyPressed(int key) const {
     return glfwGetKey(m_Window, key) == GLFW_PRESS;
 }
 
-void OpenGLRenderEngine::SetCameraForInput(Camera* camera) {
-    m_InputCamera = camera;
+void OpenGLRenderEngine::GetMouseDelta(float& x, float& y) {
+    x = m_MouseDeltaX;
+    y = m_MouseDeltaY;
 }
 
-bool OpenGLRenderEngine::IsSpotLightOn() const {
-    return m_SpotLightOn;
+void OpenGLRenderEngine::SetMouseHidden(bool hidden) {
+    m_HideMouse = hidden;
+    if (hidden) {
+        glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        m_FirstMouse = true;
+    } else {
+        glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    }
 }
 
-void OpenGLRenderEngine::processInput() {
-    if (!m_InputCamera || !m_Window) return;
-    Camera& camera = *m_InputCamera;
-    if (glfwGetKey(m_Window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(m_Window, true);
-    if (glfwGetKey(m_Window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.Move(HORIZON_FORWARD, m_DeltaTime);
-    if (glfwGetKey(m_Window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.Move(HORIZON_BACKWARD, m_DeltaTime);
-    if (glfwGetKey(m_Window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.Move(LEFT, m_DeltaTime);
-    if (glfwGetKey(m_Window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.Move(RIGHT, m_DeltaTime);
-    if (glfwGetKey(m_Window, GLFW_KEY_SPACE) == GLFW_PRESS)
-        camera.Move(WORLD_UP, m_DeltaTime);
-    if (glfwGetKey(m_Window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-        camera.Move(WORLD_DOWN, m_DeltaTime);
+bool OpenGLRenderEngine::ShouldClose() const {
+    return m_Window ? glfwWindowShouldClose(m_Window) : true;
 }
 
 void OpenGLRenderEngine::framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -149,6 +134,7 @@ void OpenGLRenderEngine::framebuffer_size_callback(GLFWwindow* window, int width
     if (s_Engine) {
         s_Engine->m_Width = width;
         s_Engine->m_Height = height;
+        glViewport(0, 0, width, height);
         if (s_Engine->m_Renderer) {
             s_Engine->m_Renderer->Resize(width, height);
         }
@@ -157,37 +143,22 @@ void OpenGLRenderEngine::framebuffer_size_callback(GLFWwindow* window, int width
 
 void OpenGLRenderEngine::mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     (void)window;
-    if (!s_Engine || !s_Engine->m_InputCamera) return;
-    if (!s_Engine->m_HideMouse) {
-        s_Engine->m_FirstMouse = true;
-        return;
-    }
+    if (!s_Engine || !s_Engine->m_HideMouse) return;
+
     if (s_Engine->m_FirstMouse) {
         s_Engine->m_LastX = static_cast<float>(xpos);
         s_Engine->m_LastY = static_cast<float>(ypos);
         s_Engine->m_FirstMouse = false;
     }
-    float xoffset = static_cast<float>(xpos) - s_Engine->m_LastX;
-    float yoffset = s_Engine->m_LastY - static_cast<float>(ypos);
+
+    s_Engine->m_MouseDeltaX = static_cast<float>(xpos) - s_Engine->m_LastX;
+    s_Engine->m_MouseDeltaY = s_Engine->m_LastY - static_cast<float>(ypos);
+
     s_Engine->m_LastX = static_cast<float>(xpos);
     s_Engine->m_LastY = static_cast<float>(ypos);
-    s_Engine->m_InputCamera->PitchAndYaw(xoffset * s_Engine->m_Sensitivity, yoffset * s_Engine->m_Sensitivity);
 }
 
 void OpenGLRenderEngine::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    (void)scancode;
-    (void)mods;
-    if (!s_Engine) return;
-    if (key == GLFW_KEY_LEFT_SHIFT && action == GLFW_PRESS) {
-        s_Engine->m_HideMouse = !s_Engine->m_HideMouse;
-        if (s_Engine->m_HideMouse) {
-            s_Engine->m_FirstMouse = true;
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        } else {
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        }
-    }
-    if (key == GLFW_KEY_F && action == GLFW_PRESS) {
-        s_Engine->m_SpotLightOn = !s_Engine->m_SpotLightOn;
-    }
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
 }

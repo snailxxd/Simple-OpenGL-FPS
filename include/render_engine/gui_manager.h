@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <glm/glm.hpp>
 
 struct GLFWwindow;
 class Camera;
@@ -21,6 +22,8 @@ struct GUIContext {
     Model* model = nullptr;
     Animator* animator = nullptr;
     std::string* currentAnimationName = nullptr;
+
+    glm::vec3* weaponOffset = nullptr;
 };
 
 class GUIManager {

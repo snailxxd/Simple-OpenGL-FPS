@@ -1,5 +1,6 @@
 #include "application/FPSGame.h"
 
+#include "world/scene.h"
 #include "model/model_gltf.h"
 #include "animation/animator.h"
 
@@ -9,21 +10,24 @@
 #define RESOURCES_PATH(path) (std::string(RESOURCES_DIR) + path)
 
 void FPSGame::OnInit() {
-    // 模型与动画
-    m_Model = std::make_unique<Model>(RESOURCES_PATH("/models/fps_ak-74m_animations.glb"), true);
-    if (!m_Model->animations.empty()) {
-        m_Animator = std::make_unique<Animator>(&m_Model->animations.begin()->second);
-        m_CurrentAnimationName = m_Model->animations.begin()->first;
+    // 初始化玩家
+    m_Player = std::make_shared<Player>("MainPlayer");
+    m_Player->SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
+
+    // 初始化武器
+    auto weaponModel = std::make_shared<Model>(RESOURCES_PATH("/models/ak74m.glb"), true);
+    m_Player->weapon = std::make_shared<Weapon>("AK74");
+    m_Player->weapon->model = weaponModel;
+
+    // 加载动画
+    if (!weaponModel->animations.empty()) {
+        m_Player->weapon->animator = std::make_shared<Animator>(&weaponModel->animations.begin()->second);
+        *m_Player->weapon->GetCurrentAnimationName() = weaponModel->animations.begin()->first;
     }
 
-    // 场景挂接
-    m_Scene.models.push_back(m_Model.get());
-    if (m_Animator) {
-        m_Scene.animators.push_back(m_Animator.get());
-    }
-
-    // 将相机指针交给渲染引擎用于处理输入/鼠标
-    GetEngine().SetCameraForInput(&m_Camera);
+    // 初始化场景
+    m_Scene.AddEntity(m_Player);
+    m_Scene.AddEntity(m_Player->weapon);
 
     // 初始化渲染参数
     m_RenderParams.width = GetEngine().GetWidth();
@@ -36,36 +40,20 @@ void FPSGame::OnInit() {
     m_RenderParams.orthoSize = m_OrthoSize;
     m_RenderParams.nearPlane = m_NearPlane;
     m_RenderParams.farPlane = m_FarPlane;
-    m_RenderParams.animator = m_Animator.get();
+    m_RenderParams.animator = m_Player->weapon->animator.get();
 }
 
 void FPSGame::OnUpdate(float deltaTime) {
-    m_Time += deltaTime;
+    m_Time += deltaTime;    // 时间计数器
+
+    ProcessMouseInput(deltaTime);
+    ProcessKeyboardInput(deltaTime);
+
+    // 更新场景
+    m_Scene.Update(deltaTime);
 
     // 简单旋转平行光
-    m_Scene.dirLight.direction = glm::vec3(std::sin(0.3f * m_Time), -1.0f, std::cos(0.3f * m_Time));
-
-    // 动画更新
-    for (Animator* anim : m_Scene.animators) {
-        if (anim) {
-            anim->UpdateAnimation(deltaTime);
-        }
-    }
-
-    // 处理键盘输入驱动相机
-    auto& engine = GetEngine();
-    if (engine.IsKeyPressed(GLFW_KEY_W))
-        m_Camera.Move(HORIZON_FORWARD, deltaTime);
-    if (engine.IsKeyPressed(GLFW_KEY_S))
-        m_Camera.Move(HORIZON_BACKWARD, deltaTime);
-    if (engine.IsKeyPressed(GLFW_KEY_A))
-        m_Camera.Move(LEFT, deltaTime);
-    if (engine.IsKeyPressed(GLFW_KEY_D))
-        m_Camera.Move(RIGHT, deltaTime);
-    if (engine.IsKeyPressed(GLFW_KEY_SPACE))
-        m_Camera.Move(WORLD_UP, deltaTime);
-    if (engine.IsKeyPressed(GLFW_KEY_LEFT_CONTROL))
-        m_Camera.Move(WORLD_DOWN, deltaTime);
+    m_Scene.dirLight.direction = glm::vec3(std::sin(0.2f * m_Time), -1.0f, std::cos(0.3f * m_Time));
 }
 
 void FPSGame::OnRender() {
@@ -80,15 +68,16 @@ void FPSGame::OnRender() {
     m_RenderParams.orthoSize = m_OrthoSize;
     m_RenderParams.nearPlane = m_NearPlane;
     m_RenderParams.farPlane = m_FarPlane;
-    m_RenderParams.spotLightOn = engine.IsSpotLightOn();
-    m_RenderParams.animator = m_Animator.get();
+    m_RenderParams.spotLightOn = m_SpotLightOn;
+    m_RenderParams.hideMouse = m_HideMouse;
+    m_RenderParams.animator = m_Player->weapon->animator.get();
 
-    engine.RenderFrame(m_Scene, m_Camera, m_RenderParams);
+    engine.RenderFrame(m_Scene, *m_Player->camera, m_RenderParams);
 }
 
 void FPSGame::OnGui() {
     GUIContext ctx;
-    ctx.camera = &m_Camera;
+    ctx.camera = m_Player->camera.get();
     ctx.renderMode = &m_RenderMode;
     ctx.gammaCorrection = &m_GammaCorrection;
     ctx.renderSkybox = &m_RenderSkybox;
@@ -96,9 +85,50 @@ void FPSGame::OnGui() {
     ctx.orthoSize = &m_OrthoSize;
     ctx.nearPlane = &m_NearPlane;
     ctx.farPlane = &m_FarPlane;
-    ctx.model = m_Model.get();
-    ctx.animator = m_Animator.get();
-    ctx.currentAnimationName = (m_Model && m_Animator) ? &m_CurrentAnimationName : nullptr;
+    ctx.model = m_Player->weapon->model.get();
+    ctx.animator = m_Player->weapon->animator.get();
+    ctx.currentAnimationName = m_Player->weapon->GetCurrentAnimationName();
+    ctx.weaponOffset = &m_Player->weaponOffset;
 
     GetEngine().RenderGui(ctx);
+}
+
+void FPSGame::ProcessMouseInput(float deltaTime) {
+    auto& engine = GetEngine();
+    if (m_HideMouse) {
+        float dx, dy;
+        engine.GetMouseDelta(dx, dy);
+        m_Player->HandleLook(dx * m_MouseSensitivity, dy * m_MouseSensitivity); 
+    }
+}
+
+void FPSGame::ProcessKeyboardInput(float deltaTime) {
+    auto& engine = GetEngine();
+    if (engine.IsKeyPressed(GLFW_KEY_W)) m_Player->HandleMove(HORIZON_FORWARD, deltaTime);          // W: 前进
+    if (engine.IsKeyPressed(GLFW_KEY_S)) m_Player->HandleMove(HORIZON_BACKWARD, deltaTime);         // S: 后退
+    if (engine.IsKeyPressed(GLFW_KEY_A)) m_Player->HandleMove(LEFT, deltaTime);                     // A: 左
+    if (engine.IsKeyPressed(GLFW_KEY_D)) m_Player->HandleMove(RIGHT, deltaTime);                    // D: 右
+    if (engine.IsKeyPressed(GLFW_KEY_SPACE)) m_Player->HandleMove(WORLD_UP, deltaTime);             // SPACE: 上
+    if (engine.IsKeyPressed(GLFW_KEY_LEFT_CONTROL)) m_Player->HandleMove(WORLD_DOWN, deltaTime);    // CTRL: 下
+
+    static bool shiftPressed = false;
+    if (engine.IsKeyPressed(GLFW_KEY_LEFT_SHIFT)) {     // SHIFT: 切换鼠标隐藏
+        if (!shiftPressed) {
+            m_HideMouse = !m_HideMouse;
+            engine.SetMouseHidden(m_HideMouse);
+            shiftPressed = true;
+        }
+    } else {
+        shiftPressed = false;
+    }
+
+    static bool fPressed = false;
+    if (engine.IsKeyPressed(GLFW_KEY_F)) {              // F: 开关手电
+        if (!fPressed) {
+            m_SpotLightOn = !m_SpotLightOn;
+            fPressed = true;
+        }
+    } else {
+        fPressed = false;
+    }
 }
