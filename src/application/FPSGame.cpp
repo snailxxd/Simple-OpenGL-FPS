@@ -32,8 +32,8 @@ void FPSGame::OnInit() {
     // 初始化渲染参数
     m_RenderParams.width = GetEngine().GetWidth();
     m_RenderParams.height = GetEngine().GetHeight();
-    m_RenderParams.shadowWidth = 2048;
-    m_RenderParams.shadowHeight = 2048;
+    m_RenderParams.shadowWidth = GetEngine().GetShadowWidth();
+    m_RenderParams.shadowHeight = GetEngine().GetShadowHeight();
     m_RenderParams.renderMode = m_RenderMode;
     m_RenderParams.gammaCorrection = m_GammaCorrection;
     m_RenderParams.renderSkybox = m_RenderSkybox;

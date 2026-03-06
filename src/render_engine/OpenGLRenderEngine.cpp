@@ -105,6 +105,14 @@ int OpenGLRenderEngine::GetHeight() const {
     return m_Height;
 }
 
+int OpenGLRenderEngine::GetShadowWidth() const {
+    return m_ShadowWidth;
+}
+
+int OpenGLRenderEngine::GetShadowHeight() const {
+    return m_ShadowHeight;
+}
+
 bool OpenGLRenderEngine::IsKeyPressed(int key) const {
     if (!m_Window) return false;
     return glfwGetKey(m_Window, key) == GLFW_PRESS;

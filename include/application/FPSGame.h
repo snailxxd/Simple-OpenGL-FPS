@@ -31,7 +31,7 @@ private:
     int m_RenderMode = 0;
     int m_GammaCorrection = 0;
     int m_RenderSkybox = 0;
-    float m_OrthoSize = 2.5f;
+    float m_OrthoSize = 5.0f;
     float m_NearPlane = 1.0f;
     float m_FarPlane = 20.0f;
     bool m_SpotLightOn = false;

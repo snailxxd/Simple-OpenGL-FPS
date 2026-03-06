@@ -32,6 +32,9 @@ public:
     virtual float GetDeltaTime() const = 0;             // 本帧与上一帧的时间差
     virtual int GetWidth() const = 0;                   // 当前窗口宽度  
     virtual int GetHeight() const = 0;                  // 当前窗口高度
+    virtual int GetShadowWidth() const = 0;             // 阴影 FBO 宽度
+    virtual int GetShadowHeight() const = 0;            // 阴影 FBO 高度
+
     virtual bool IsKeyPressed(int key) const = 0;       // 查询按键是否按下
     virtual bool IsMousePressed(int button) const = 0;  // 查询鼠标按键是否按下
     virtual void SetMouseHidden(bool hidden) = 0;       // 设置鼠标是否隐藏

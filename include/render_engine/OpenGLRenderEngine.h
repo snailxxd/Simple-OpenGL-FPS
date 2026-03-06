@@ -31,6 +31,8 @@ public:
     float GetDeltaTime() const override;
     int GetWidth() const override;
     int GetHeight() const override;
+    int GetShadowWidth() const override;
+    int GetShadowHeight() const override;
     bool ShouldClose() const override;
 
     bool IsKeyPressed(int key) const override;
@@ -59,6 +61,6 @@ private:
     float m_MouseDeltaY = 0.0f;
     bool m_HideMouse = true;
 
-    int m_ShadowWidth = 2048;
-    int m_ShadowHeight = 2048;
+    int m_ShadowWidth = 4096;
+    int m_ShadowHeight = 4096;
 };
