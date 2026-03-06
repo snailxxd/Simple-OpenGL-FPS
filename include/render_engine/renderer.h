@@ -72,10 +72,10 @@ private:
     // 光空间矩阵
     glm::mat4 m_LightSpaceMatrix{1.0f};
 
-    int m_Width = 1920;
-    int m_Height = 1080;
-    int m_ShadowWidth = 2048;
-    int m_ShadowHeight = 2048;
+    int m_Width;
+    int m_Height;
+    int m_ShadowWidth;
+    int m_ShadowHeight;
 
 private:
     void renderSceneGeometry(Shader& shader, Scene& scene);

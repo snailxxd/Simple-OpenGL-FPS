@@ -10,6 +10,8 @@ public:
         m_CurrentTime = 0.0;
         m_CurrentAnimation = Animation;
         m_speed = 1.0f;
+        m_Looping = true;
+        m_Finished = false;
 
         m_BoneCaches.assign(m_CurrentAnimation->GetBoneInfoMap().size(), {0, 0, 0});
 
@@ -20,22 +22,35 @@ public:
 
     float& GetSpeed() { return m_speed; }
 
+    Animation* GetCurrentAnimation() { return m_CurrentAnimation; }
+
+    bool IsFinished() { return m_Finished; }
+
     void UpdateAnimation(float dt) {
+        if (m_Finished) return;
         m_DeltaTime = dt;
+        float duration = m_CurrentAnimation->GetDuration();
         if (m_CurrentAnimation) {
             m_CurrentTime += m_CurrentAnimation->GetTicksPerSecond() * dt * m_speed;
-            if (m_CurrentTime >= m_CurrentAnimation->GetDuration()) {
-                m_CurrentTime = fmod(m_CurrentTime, m_CurrentAnimation->GetDuration());
-                m_BoneCaches.assign(m_CurrentAnimation->GetBoneInfoMap().size(), {0, 0, 0});
+            if (m_CurrentTime >= duration) {
+                if (m_Looping) {
+                    m_CurrentTime = fmod(m_CurrentTime, duration);
+                    m_BoneCaches.assign(m_CurrentAnimation->GetBoneInfoMap().size(), {0, 0, 0});
+                } else {
+                    m_CurrentTime = duration - 1; 
+                    m_Finished = true;
+                }
             }
             CalculateBoneTransform(&m_CurrentAnimation->GetRootNode(), glm::mat4(1.0f));
         }
     }
 
-    void PlayAnimation(Animation* pAnimation) {
+    void PlayAnimation(Animation* pAnimation, bool loop = true) {
         m_CurrentAnimation = pAnimation;
         m_CurrentTime = 0.0f;
+        m_Looping = loop;
         m_BoneCaches.assign(pAnimation->GetBoneInfoMap().size(), {0, 0, 0});
+        m_Finished = false;
     }
 
     void CalculateBoneTransform(const AssimpNodeData* node, glm::mat4 parentTransform) {
@@ -75,4 +90,6 @@ private:
     float m_DeltaTime;
     std::vector<BoneCache> m_BoneCaches;
     float m_speed;
+    bool m_Looping;
+    bool m_Finished;
 };

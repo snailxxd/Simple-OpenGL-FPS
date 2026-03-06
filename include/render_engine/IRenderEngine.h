@@ -33,6 +33,7 @@ public:
     virtual int GetWidth() const = 0;                   // 当前窗口宽度  
     virtual int GetHeight() const = 0;                  // 当前窗口高度
     virtual bool IsKeyPressed(int key) const = 0;       // 查询按键是否按下
+    virtual bool IsMousePressed(int button) const = 0;  // 查询鼠标按键是否按下
     virtual void SetMouseHidden(bool hidden) = 0;       // 设置鼠标是否隐藏
     virtual void GetMouseDelta(float& x, float& y) = 0; // 获取本帧鼠标偏移
     virtual bool ShouldClose() const = 0;               // 是否应关闭窗口

@@ -29,6 +29,8 @@ public:
 
     void Draw(Shader &shader, glm::mat4 worldModel = glm::mat4(1.0f));
 
+    Animation* GetAnimation(const string& name) { return &animations[name]; }
+
     auto& GetBoneInfoMap() { return m_BoneInfoMap; }
     int& GetBoneCounter() { return m_BoneCounter; }
 

@@ -110,6 +110,11 @@ bool OpenGLRenderEngine::IsKeyPressed(int key) const {
     return glfwGetKey(m_Window, key) == GLFW_PRESS;
 }
 
+bool OpenGLRenderEngine::IsMousePressed(int button) const {
+    if (!m_Window) return false;
+    return glfwGetMouseButton(m_Window, button) == GLFW_PRESS;
+}
+
 void OpenGLRenderEngine::GetMouseDelta(float& x, float& y) {
     x = m_MouseDeltaX;
     y = m_MouseDeltaY;

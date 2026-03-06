@@ -100,6 +100,9 @@ void FPSGame::ProcessMouseInput(float deltaTime) {
         engine.GetMouseDelta(dx, dy);
         m_Player->HandleLook(dx * m_MouseSensitivity, dy * m_MouseSensitivity); 
     }
+    if (engine.IsMousePressed(GLFW_MOUSE_BUTTON_LEFT)) {
+        m_Player->weapon->Fire(deltaTime);
+    }
 }
 
 void FPSGame::ProcessKeyboardInput(float deltaTime) {
@@ -110,6 +113,8 @@ void FPSGame::ProcessKeyboardInput(float deltaTime) {
     if (engine.IsKeyPressed(GLFW_KEY_D)) m_Player->HandleMove(RIGHT, deltaTime);                    // D: 右
     if (engine.IsKeyPressed(GLFW_KEY_SPACE)) m_Player->HandleMove(WORLD_UP, deltaTime);             // SPACE: 上
     if (engine.IsKeyPressed(GLFW_KEY_LEFT_CONTROL)) m_Player->HandleMove(WORLD_DOWN, deltaTime);    // CTRL: 下
+    if (engine.IsKeyPressed(GLFW_KEY_R)) m_Player->weapon->Reload(deltaTime);                       // R: 换弹
+    if (engine.IsKeyPressed(GLFW_KEY_Q)) m_Player->weapon->Draw(deltaTime);                         // Q: 切枪
 
     static bool shiftPressed = false;
     if (engine.IsKeyPressed(GLFW_KEY_LEFT_SHIFT)) {     // SHIFT: 切换鼠标隐藏

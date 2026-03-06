@@ -34,6 +34,7 @@ public:
     bool ShouldClose() const override;
 
     bool IsKeyPressed(int key) const override;
+    bool IsMousePressed(int button) const override;
     void GetMouseDelta(float& x, float& y) override;
     void SetMouseHidden(bool hidden) override;
 

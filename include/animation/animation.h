@@ -17,6 +17,7 @@ struct AssimpNodeData {
 
 class Animation {
 public:
+    Animation() = default;
     Animation(aiAnimation* animation, aiNode* rootNode, std::map<std::string, BoneInfo>& boneInfoMap, int& boneCount);
 
     Bone* FindBone(const std::string& name);
