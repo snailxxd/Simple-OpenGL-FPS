@@ -80,9 +80,9 @@ void GUIManager::render_gui(const GUIContext& ctx) {
     if (ctx.orthoSize && ctx.nearPlane && ctx.farPlane) {
         ImGui::BeginChild("Shadow Controls", ImVec2(0, 100), true);
         ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Shadow Controls");
-        ImGui::SliderFloat("Ortho Size", ctx.orthoSize, 0.0f, 15.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SliderFloat("Ortho Size", ctx.orthoSize, 0.0f, 25.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
         ImGui::SliderFloat("Near Plane", ctx.nearPlane, 0.0f, 20.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::SliderFloat("Far Plane", ctx.farPlane, 0.0f, 20.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SliderFloat("Far Plane", ctx.farPlane, 0.0f, 40.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
         ImGui::EndChild();
     }
 

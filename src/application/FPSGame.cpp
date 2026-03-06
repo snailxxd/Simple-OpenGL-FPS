@@ -15,6 +15,10 @@ void FPSGame::OnInit() {
     m_Player->SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
 
     // 初始化武器
+    auto prisonModel = std::make_shared<Model>(RESOURCES_PATH("/environments/prison.glb"), true);
+    shared_ptr<Entity> m_Prison = std::make_shared<Entity>("Prison");
+    m_Prison->model = prisonModel;
+
     auto weaponModel = std::make_shared<Model>(RESOURCES_PATH("/models/ak74m.glb"), true);
     m_Player->weapon = std::make_shared<Weapon>("AK74");
     m_Player->weapon->model = weaponModel;
@@ -28,6 +32,7 @@ void FPSGame::OnInit() {
     // 初始化场景
     m_Scene.AddEntity(m_Player);
     m_Scene.AddEntity(m_Player->weapon);
+    m_Scene.AddEntity(m_Prison);
 
     // 初始化渲染参数
     m_RenderParams.width = GetEngine().GetWidth();
@@ -53,7 +58,7 @@ void FPSGame::OnUpdate(float deltaTime) {
     m_Scene.Update(deltaTime);
 
     // 简单旋转平行光
-    m_Scene.dirLight.direction = glm::vec3(std::sin(0.2f * m_Time), -1.0f, std::cos(0.3f * m_Time));
+    m_Scene.dirLight.direction = glm::vec3(std::sin(0.02f * m_Time), -1.0f, std::cos(0.1f * m_Time));
 }
 
 void FPSGame::OnRender() {

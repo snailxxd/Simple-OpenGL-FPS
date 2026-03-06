@@ -30,13 +30,13 @@ private:
     RenderParams m_RenderParams{};
     int m_RenderMode = 0;
     int m_GammaCorrection = 0;
-    int m_RenderSkybox = 0;
-    float m_OrthoSize = 5.0f;
+    int m_RenderSkybox = 1;
+    float m_OrthoSize = 11.0f;
     float m_NearPlane = 1.0f;
-    float m_FarPlane = 20.0f;
+    float m_FarPlane = 30.0f;
     bool m_SpotLightOn = false;
     bool m_HideMouse = true;
-    float m_MouseSensitivity = 0.05f;
+    float m_MouseSensitivity = 0.03f;
 
     // 简单时间累计，用于灯光动画
     float m_Time = 0.0f;
