@@ -5,11 +5,6 @@ dist/
 bin/
 obj/
 
-# Resources
-resources/environments/
-resources/hdr/
-resources/models/
-
 # IDE and Editor
 .vscode/
 .idea/
