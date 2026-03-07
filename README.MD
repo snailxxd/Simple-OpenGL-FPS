@@ -10,8 +10,8 @@
 本项目由我的学习仓库 [*MyLearnOpenGL*](https://github.com/snailxxd/MyLearnOpenGL) 重构并丰富而来，重点从“实现图形特性”转向了“游戏引擎架构设计”，从面向过程的教学实现重构为模块化的面向对象设计。
 
 ## 📸 项目演示
-![](docs/images/reload.gif){width=800}
-![](docs/images/lookaround.gif){width=800}
+![](docs/images/reload.gif)
+![](docs/images/lookaround.gif)
 
 ## 🏗 构建说明 (Build)
 
