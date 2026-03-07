@@ -5,7 +5,7 @@
 
 ***Simple-OpenGL-FPS*** 是一个基于 **C++** 和 **OpenGL 3.3** 的从零编写的第一人称射击游戏原型。
 
-本项目实现了基于接口抽象的一套基于 OpenGL 的渲染引擎架构，支持 PBR 渲染管线、骨骼动画以及实体管理系统，使用 Assimp 模型加载库，目前支持 glTF 和 glb 格式的模型/纹理/动画。
+本项目实现了基于接口抽象的一套渲染引擎架构，支持 PBR 渲染管线、骨骼动画以及实体管理系统，使用 Assimp 模型加载库，目前支持 glTF 和 glb 格式的模型/纹理/动画。
 
 本项目由我的学习仓库 [*MyLearnOpenGL*](https://github.com/snailxxd/MyLearnOpenGL) 重构并丰富而来，重点从“实现图形特性”转向了“游戏引擎架构设计”，从面向过程的教学实现重构为模块化的面向对象设计。
 
@@ -67,9 +67,9 @@ cmake --build build --config Release -j 8
 
 ## 🛠 逻辑层次
 
-- Application: 玩家控制、相机逻辑、武器状态机（ADS 瞄准、射击逻辑）。
+- Application: 玩家控制、相机逻辑、武器状态机
 - Render Engine: 负责窗口管理、OpenGL 状态维护、着色器资源加载。
-- World & Entity: 管理游戏场景中的所有对象及其变换坐标（TRS），模型、材质与动画的加载。
+- World & Entity: 管理游戏场景中的所有对象及其变换坐标，模型、材质与动画的加载。
 
 ## 📅 开发路线图
 - [x] 核心渲染管线与 PBR 支持
