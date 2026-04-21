@@ -36,9 +36,13 @@ public:
 
     virtual void OnUpdate(float deltaTime) {}
 
-    void SetPosition(const glm::vec3& pos) { position = pos; m_Dirty = true; }
-    void SetRotation(const glm::vec3& rot) { rotation = rot; m_Dirty = true; }
-    void SetScale(const glm::vec3& scale) { this->scale = scale; m_Dirty = true; }
+    virtual void SetPosition(const glm::vec3& pos) { position = pos; m_Dirty = true; }
+    virtual void SetRotation(const glm::vec3& rot) { rotation = rot; m_Dirty = true; }
+    virtual void SetScale(const glm::vec3& scale) { this->scale = scale; m_Dirty = true; }
+
+    const glm::vec3& GetPosition() const { return position; }
+    const glm::vec3& GetRotation() const { return rotation; }
+    const glm::vec3& GetScale() const { return scale; }
 
     const std::string& GetName() const { return m_Name; }
     std::string* GetCurrentAnimationName() { return &m_CurrentAnimationName; }
