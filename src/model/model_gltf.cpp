@@ -1,5 +1,7 @@
 #include "model/model_gltf.h"
 
+#include <limits>
+
 Model::Model(const string &path, bool gamma) : gammaCorrection(gamma)
 {
     m_BoneCounter = 0;
@@ -122,6 +124,9 @@ Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene, glm::mat4 transform)
     vector<Texture> textures;
     MatrialFactors factors;
 
+    glm::vec3 localMin(std::numeric_limits<float>::max());
+    glm::vec3 localMax(std::numeric_limits<float>::lowest());
+
     for (unsigned int i = 0; i < mesh->mNumVertices; i++) {     // 顶点属性解析
         Vertex vertex;
 
@@ -130,6 +135,9 @@ Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene, glm::mat4 transform)
         vertex.Position = glm::vec3(mesh->mVertices[i].x,       // 位置
                                     mesh->mVertices[i].y, 
                                     mesh->mVertices[i].z);
+
+        localMin = glm::min(localMin, vertex.Position);
+        localMax = glm::max(localMax, vertex.Position);
 
         vertex.Normal = glm::vec3(mesh->mNormals[i].x,          // 法线
                                     mesh->mNormals[i].y,
@@ -192,7 +200,11 @@ Mesh Model::processMesh(aiMesh *mesh, const aiScene *scene, glm::mat4 transform)
         textures.push_back(loadMaterialTexture(material, aiTextureType_METALNESS, "ormMap", scene));
     }
 
-    return Mesh(vertices, indices, textures, transform, factors);
+    Mesh result(vertices, indices, textures, transform, factors);
+    if (!vertices.empty()) {
+        result.SetLocalBounds(localMin, localMax);
+    }
+    return result;
 }
 
 Texture Model::loadMaterialTexture(aiMaterial *mat, aiTextureType type, string typeName, const aiScene *scene) {

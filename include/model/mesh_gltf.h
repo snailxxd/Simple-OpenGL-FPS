@@ -47,6 +47,9 @@ public:
     MatrialFactors factors;
 
     glm::mat4 modelMatrix;  // mesh 的变换矩阵
+    glm::vec3 localBoundsMin{0.0f};
+    glm::vec3 localBoundsMax{0.0f};
+    bool hasLocalBounds = false;
 
     Mesh(vector<Vertex> vertices, vector<unsigned int> indices, vector<Texture> textures, glm::mat4 matrix = glm::mat4(1.0f), MatrialFactors factors = MatrialFactors()) {
         this->vertices = vertices;
@@ -85,6 +88,17 @@ public:
 
         glActiveTexture(GL_TEXTURE0);
     }
+
+    void SetLocalBounds(const glm::vec3& minBounds, const glm::vec3& maxBounds) {
+        localBoundsMin = minBounds;
+        localBoundsMax = maxBounds;
+        hasLocalBounds = true;
+    }
+
+    bool HasLocalBounds() const { return hasLocalBounds; }
+    const glm::vec3& GetLocalBoundsMin() const { return localBoundsMin; }
+    const glm::vec3& GetLocalBoundsMax() const { return localBoundsMax; }
+
 private:
     unsigned int VAO, VBO, EBO;
 
