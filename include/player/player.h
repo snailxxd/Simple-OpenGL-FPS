@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <cmath>
 #include <memory>
 #include "camera/camera.h"
 #include "entities/weapon.h"
@@ -26,34 +28,58 @@ public:
 
     Player(const std::string& name) : Entity(name) {
         camera = std::make_shared<Camera>(this->position + glm::vec3(0.0f, eyeHeight, 0.0f));
-    }
-
-    void HandleMove(Camera_Movement direction, float deltaTime) {
-        camera->Move(direction, deltaTime);
-        this->position = camera->Position - glm::vec3(0, eyeHeight, 0); 
-        this->m_Dirty = true;
-        state = PlayerMovementState::WALKING;
+        SyncViewAndAttachments();
     }
 
     void HandleLook(float xoffset, float yoffset) {
-        camera->PitchAndYaw(xoffset, yoffset);
+        rotation.y += xoffset;
+        m_Dirty = true;
+        m_ViewPitch = std::clamp(m_ViewPitch + yoffset, -89.0f, 89.0f);
+        SyncViewAndAttachments();
     }
 
     void OnUpdate(float dt) override {
-         if (weapon && camera) {
-            glm::vec3 targetWeaponPos = camera->Position 
-                                      + camera->Right * weaponOffset.x 
-                                      + camera->Up * weaponOffset.y 
+        (void)dt;
+
+        HandleAnimations();
+    }
+
+    void SetPosition(const glm::vec3& position) override {
+        Entity::SetPosition(position);
+        SyncViewAndAttachments();
+    }
+
+    void SetRotation(const glm::vec3& rotation) override {
+        Entity::SetRotation(rotation);
+        m_ViewPitch = std::clamp(rotation.x, -89.0f, 89.0f);
+        SyncViewAndAttachments();
+    }
+
+private:
+    float m_ViewPitch = 0.0f;
+
+    void SyncViewAndAttachments() {
+        if (camera) {
+            camera->Position = position + glm::vec3(0.0f, eyeHeight, 0.0f);
+
+            const float targetYaw = rotation.y - 90.0f;
+            const float yawDelta = targetYaw - camera->Yaw;
+            const float pitchDelta = m_ViewPitch - camera->Pitch;
+            if (std::fabs(yawDelta) > 0.0001f || std::fabs(pitchDelta) > 0.0001f) {
+                camera->PitchAndYaw(yawDelta, pitchDelta);
+            }
+        }
+
+        if (weapon && camera) {
+            glm::vec3 targetWeaponPos = camera->Position
+                                      + camera->Right * weaponOffset.x
+                                      + camera->Up * weaponOffset.y
                                       + camera->Front * weaponOffset.z;
             weapon->SetPosition(targetWeaponPos);
             weapon->SetRotation(glm::vec3(-camera->Pitch, -camera->Yaw + 90.0f, 0.0f));
         }
-
-        HandleAnimations();
-        state = PlayerMovementState::IDLE;
     }
 
-private:
     void HandleAnimations() {
         if (!weapon || !weapon->animator || !weapon->model) return;
 
