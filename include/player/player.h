@@ -38,6 +38,10 @@ public:
         SyncViewAndAttachments();
     }
 
+    void HandleMove(Camera_Movement direction, float deltaTime) {
+        // TODO:
+    }
+
     void OnUpdate(float dt) override {
         (void)dt;
 
