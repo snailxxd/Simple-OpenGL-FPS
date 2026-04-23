@@ -7,66 +7,66 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_definitions(-DRESOURCES_DIR="${CMAKE_SOURCE_DIR}/resources")
 
-# 指定链接库
-set(LIBS glfw3 assimp z opengl32)
+add_library(ENGINE_COMMON_CONFIG INTERFACE)
+target_include_directories(ENGINE_COMMON_CONFIG INTERFACE 
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/external
+    ${CMAKE_SOURCE_DIR}/external/glad/include
+    ${CMAKE_SOURCE_DIR}/external/stb_image/include
+)
 
-add_library(MODEL_LIB src/model/model_gltf.cpp)
-target_include_directories(MODEL_LIB PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(MODEL_LIB PRIVATE assimp z GLAD STB_IMAGE)
+# GLAD
+add_library(GLAD external/glad/src/glad.c)
+target_include_directories(GLAD PUBLIC ${CMAKE_SOURCE_DIR}/external/glad/include)
 
-add_library(ANIMATION_LIB src/animation/animation.cpp src/animation/bone.cpp)
-target_include_directories(ANIMATION_LIB PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(ANIMATION_LIB PRIVATE assimp z GLAD STB_IMAGE)
-
-add_library(GLAD src/glad.c)
-target_include_directories(GLAD PUBLIC ${CMAKE_SOURCE_DIR}/include)
-set(LIBS ${LIBS} GLAD)
-
-add_library(STB_IMAGE src/stb_image.cpp)
-target_include_directories(STB_IMAGE PUBLIC ${CMAKE_SOURCE_DIR}/include)
+# STB_IMAGE
+add_library(STB_IMAGE external/stb_image/src/stb_image.cpp)
+target_include_directories(STB_IMAGE PUBLIC ${CMAKE_SOURCE_DIR}/external/stb_image/include)
 set(LIBS ${LIBS} STB_IMAGE)
 
+# IMGUI
 file(GLOB IMGUI_SOURCES
-    src/imgui/*.cpp
+    external/imgui/src/*.cpp
 )
 add_library(IMGUI ${IMGUI_SOURCES})
-target_include_directories(IMGUI PUBLIC 
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/include/imgui
+target_include_directories(IMGUI
+    PUBLIC ${CMAKE_SOURCE_DIR}/external/imgui/include
+    PRIVATE ${CMAKE_SOURCE_DIR}/external
 )
-set(LIBS ${LIBS} IMGUI)
 
+# 模型库
+add_library(MODEL_LIB src/model/model_gltf.cpp)
+target_link_libraries(MODEL_LIB 
+    PUBLIC ENGINE_COMMON_CONFIG STB_IMAGE
+    PRIVATE assimp z GLAD ANIMATION_LIB
+)
+
+# 动画库
+add_library(ANIMATION_LIB src/animation/animation.cpp src/animation/bone.cpp)
+target_link_libraries(ANIMATION_LIB 
+    PUBLIC MODEL_LIB ENGINE_COMMON_CONFIG
+)
+
+# 渲染引擎库
 add_library(RENDER_ENGINE_LIB
     src/render_engine/OpenGLRenderEngine.cpp
     src/render_engine/renderer.cpp
     src/render_engine/gui_manager.cpp
 )
-target_include_directories(RENDER_ENGINE_LIB PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(RENDER_ENGINE_LIB
+    PUBLIC MODEL_LIB ANIMATION_LIB ENGINE_COMMON_CONFIG
     PRIVATE GLAD STB_IMAGE IMGUI
-    PRIVATE MODEL_LIB ANIMATION_LIB
 )
 
+# 场景库
 add_library(WORLD_LIB src/world/scene.cpp)
-target_include_directories(WORLD_LIB PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(WORLD_LIB PUBLIC ENGINE_COMMON_CONFIG)
 
+# 应用层
 add_library(APPLICATION_LIB src/application/Application.cpp src/application/FPSGame.cpp)
-target_include_directories(APPLICATION_LIB PUBLIC ${CMAKE_SOURCE_DIR}/include)
-
-# 统一 LIBS 顺序
-set(LIBS
-    GLAD
-    STB_IMAGE
-    IMGUI
-    RENDER_ENGINE_LIB
-    MODEL_LIB
-    ANIMATION_LIB
-    WORLD_LIB
-    APPLICATION_LIB
-    glfw3
-    assimp
-    z
-    opengl32
+target_link_libraries(APPLICATION_LIB 
+    PUBLIC RENDER_ENGINE_LIB WORLD_LIB
+    PRIVATE opengl32 glfw3
 )
 
 # DEMO 列表
@@ -79,29 +79,16 @@ function(create_demo DEMO)
         src/${DEMO}/*.h
         src/${DEMO}/*.cpp
         src/${DEMO}/*.c
-        src/${DEMO}/*.vs
-        src/${DEMO}/*.fs
-    )
-    set(NAME ${DEMO})
-
-    # 创建可执行文件
-    add_executable(${NAME}
-        ${SOURCE}
     )
 
-    # 包含目录
-    target_include_directories(${NAME} PRIVATE 
-        ${CMAKE_SOURCE_DIR}/include
+    add_executable(${DEMO} ${SOURCE})
+
+    target_link_libraries(${DEMO} PRIVATE 
+        APPLICATION_LIB
     )
 
-    # 链接目录
-    target_link_directories(${NAME} PRIVATE
-        ${CMAKE_SOURCE_DIR}/lib
-    )
-
-    # 链接库
-    target_link_libraries(${NAME} PRIVATE
-        ${LIBS}
+    target_link_directories(${DEMO} PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/libs
     )
 
     # 复制着色器文件到可执行文件目录
