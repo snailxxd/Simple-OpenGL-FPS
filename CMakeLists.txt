@@ -44,7 +44,7 @@ target_link_libraries(MODEL_LIB
 # 动画库
 add_library(ANIMATION_LIB src/animation/animation.cpp src/animation/bone.cpp)
 target_link_libraries(ANIMATION_LIB 
-    PUBLIC MODEL_LIB ENGINE_COMMON_CONFIG
+    PUBLIC ENGINE_COMMON_CONFIG
 )
 
 # 渲染引擎库
@@ -97,7 +97,7 @@ function(create_demo DEMO)
         "resources/shaders/*.fs"
     )
     foreach(SHADER ${SHADERS})
-        add_custom_command(TARGET ${NAME} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${SHADER} $<TARGET_FILE_DIR:${NAME}>)
+        add_custom_command(TARGET ${DEMO} PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER} $<TARGET_FILE_DIR:${DEMO}>)
     endforeach(SHADER)
 endfunction()
 
